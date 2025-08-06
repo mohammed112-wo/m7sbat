@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>تسجيل الدخول</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    .form-box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .tab {
+      display: flex;
+      justify-content: space-around;
+    }
+    .tab button.active {
+      background: #2196F3;
+      color: white;
+    }
+    .error {
+      color: red;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="form-box">
+    <div class="tab">
+      <button id="loginTab" class="active" onclick="switchTab('login')">تسجيل دخول</button>
+      <button id="registerTab" onclick="switchTab('register')">إنشاء حساب</button>
+    </div>
+    <input type="text" id="nameField" placeholder="الاسم" style="display:none">
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <button onclick="handleAuth()">متابعة</button>
+    <div id="error" class="error"></div>
+  </div>
+
+  <script>
+    let isRegistering = false;
+
+    function switchTab(mode) {
+      isRegistering = mode === 'register';
+      document.getElementById("nameField").style.display = isRegistering ? "block" : "none";
+      document.getElementById("loginTab").classList.toggle("active", !isRegistering);
+      document.getElementById("registerTab").classList.toggle("active", isRegistering);
+      document.getElementById("error").textContent = "";
+    }
+
+    function handleAuth() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const name = document.getElementById("nameField").value.trim();
+      const errorDiv = document.getElementById("error");
+
+      const userKey = `user_${email}`;
+      const stored = localStorage.getItem(userKey);
+      const storedData = stored ? JSON.parse(stored) : null;
+
+      if (!email || !password || (isRegistering && !name)) {
+        errorDiv.textContent = "يرجى تعبئة جميع الحقول";
+        return;
+      }
+
+      if (isRegistering) {
+        if (storedData) {
+          errorDiv.textContent = "الحساب موجود مسبقًا";
+        } else {
+          localStorage.setItem(userKey, JSON.stringify({ name, password }));
+          loginSuccess(email);
+        }
+      } else {
+        if (!storedData || storedData.password !== password) {
+          errorDiv.textContent = "بيانات الدخول غير صحيحة";
+        } else {
+          loginSuccess(email);
+        }
+      }
+    }
+
+    function loginSuccess(email) {
+      localStorage.setItem("currentUser", email);
+      window.location.href = "M7SBAT.html"; // تأكد إن الملف موجود بنفس الاسم
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>الصفحة الرئيسية - الميزانية</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: #fefdf9;
+      color: #2c3e50;
+    }
+    header {
+      background-color: #0b3558;
+      color: white;
+      padding: 25px 30px;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo-header img {
+      width: 48px;
+    }
+    .container {
+      padding: 20px;
+    }
+    .account {
+      background: white;
+      margin-bottom: 15px;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      border-right: 5px solid #0b3558;
+    }
+    .account h3 {
+      margin: 0 0 10px;
+      color: #0b3558;
+    }
+    .account .summary {
+      margin-top: 10px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    .add-button {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #2daa5a;
+      color: white;
+      font-size: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .modal {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .modal-content input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .modal-content button {
+      padding: 10px;
+      background-color: #0b3558;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .account button {
+      background-color: #d04545;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .account .actions button {
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo-header">
+      <img src="ChatGPT Image Aug 5, 2025, 08_48_07 AM.png" alt="logo">
+    </div>
+    <span id="total">المجموع: 0 ريال</span>
+  </header>
+
+  <div class="container">
+    <div id="accounts"></div>
+  </div>
+
+  <div class="add-button" onclick="openModal()">+</div>
+
+  <!-- إضافة حساب -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <input type="text" id="accountName" placeholder="اسم الحساب">
+      <input type="number" id="accountAmount" placeholder="الرصيد الابتدائي">
+      <button onclick="addAccount()">إضافة الحساب</button>
+    </div>
+  </div>
+
+  <!-- دخل أو مصروف -->
+  <div class="modal" id="transactionModal">
+    <div class="modal-content">
+      <h3 id="transactionTypeTitle">إضافة</h3>
+      <input type="number" id="transactionAmount" placeholder="المبلغ">
+      <button onclick="submitTransaction()">حفظ</button>
+    </div>
+  </div>
+
+  <script>
+    // إعدادات Firebase - استبدلها ببيانات مشروعك
+    const firebaseConfig = {
+  apiKey: "AIzaSyB2PmpaskN57uL9O9c12_qyOs8SF_YMmvA",
+  authDomain: "expenses-tracker-9f5f6.firebaseapp.com",
+  projectId: "expenses-tracker-9f5f6",
+  storageBucket: "expenses-tracker-9f5f6.firebasestorage.app",
+  messagingSenderId: "104449878163",
+  appId: "1:104449878163:web:bf7f7079c0bb0060c70566",
+  measurementId: "G-NWPZSXN1ZD"
+};
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let data = [];
+    const container = document.getElementById('accounts');
+
+    function renderAccounts() {
+      db.collection("accounts").get().then(snapshot => {
+        container.innerHTML = '';
+        let total = 0;
+        data = [];
+
+        snapshot.forEach(doc => {
+          const acc = doc.data();
+          acc.id = doc.id;
+          data.push(acc);
+
+          const income = acc.transactions?.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) || 0;
+          const expense = acc.transactions?.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) || 0;
+          const balance = acc.amount + income - expense;
+          total += balance;
+
+          const div = document.createElement('div');
+          div.className = 'account';
+          div.innerHTML = `
+            <h3>${acc.name}</h3>
+            <div class="summary">
+              دخل: ${income.toLocaleString()} ريال<br>
+              مصروف: ${expense.toLocaleString()} ريال<br>
+              الرصيد: ${balance.toLocaleString()} ريال
+            </div>
+            <div class="actions">
+              <button onclick="deleteAccount('${acc.id}')">حذف</button>
+              <button onclick="openTransactionModal(${data.length - 1}, 'income')" style="background:#2daa5a">دخل</button>
+              <button onclick="openTransactionModal(${data.length - 1}, 'expense')" style="background:#f44336">مصروف</button>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+
+        document.getElementById('total').textContent = `المجموع: ${total.toLocaleString()} ريال`;
+      });
+    }
+
+    function addAccount() {
+      const name = document.getElementById('accountName').value.trim();
+      const amount = parseFloat(document.getElementById('accountAmount').value);
+      if (name && !isNaN(amount)) {
+        const newAccount = {
+          name,
+          amount,
+          transactions: []
+        };
+        db.collection("accounts").add(newAccount).then(() => {
+          renderAccounts();
+          closeModal();
+        });
+      }
+    }
+
+    function deleteAccount(id) {
+      db.collection("accounts").doc(id).delete().then(() => {
+        renderAccounts();
+      });
+    }
+
+    function openModal() {
+      document.getElementById('modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+      document.getElementById('accountName').value = '';
+      document.getElementById('accountAmount').value = '';
+    }
+
+    window.onclick = function(event) {
+      const modal1 = document.getElementById('modal');
+      const modal2 = document.getElementById('transactionModal');
+      if (event.target === modal1) closeModal();
+      if (event.target === modal2) modal2.style.display = 'none';
+    }
+
+    let currentAccountIndex = null;
+    let currentTransactionType = null;
+
+    function openTransactionModal(index, type) {
+      currentAccountIndex = index;
+      currentTransactionType = type;
+      document.getElementById('transactionAmount').value = '';
+      document.getElementById('transactionTypeTitle').textContent = type === 'income' ? 'إضافة دخل' : 'إضافة مصروف';
+      document.getElementById('transactionModal').style.display = 'flex';
+    }
+
+    function submitTransaction() {
+      const amount = parseFloat(document.getElementById('transactionAmount').value);
+      if (!isNaN(amount)) {
+        const entry = {
+          type: currentTransactionType,
+          amount,
+          date: new Date().toISOString().split('T')[0]
+        };
+        const account = data[currentAccountIndex];
+        account.transactions.push(entry);
+
+        db.collection("accounts").doc(account.id).update({
+          transactions: account.transactions
+        }).then(() => {
+          renderAccounts();
+          document.getElementById('transactionModal').style.display = 'none';
+        });
+      }
+    }
+
+    renderAccounts();
+  </script>
+</body>
+</html>
